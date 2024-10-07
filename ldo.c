@@ -115,7 +115,17 @@ void luaD_seterrorobj (lua_State *L, int errcode, StkId oldtop) {
 l_noret luaD_throw (lua_State *L, int errcode) {
   if (L->errorJmp) {  /* thread has an error handler? */
     L->errorJmp->status = errcode;  /* set status */
-    LUAI_THROW(L, L->errorJmp);  /* jump to it */
+    #ifdef LUA_WASM
+    // Since longjmp is not working correctly for some reason,
+    // We're using panic instead of throwing for the WASM version
+      global_State *g = G(L);
+      if (g->panic) {
+        lua_unlock(L);
+        g->panic(L);
+      }
+    #else
+      LUAI_THROW(L, L->errorJmp);  /* jump to it */
+    #endif
   }
   else {  /* thread has no error handler */
     global_State *g = G(L);
